@@ -24,7 +24,7 @@ sudo yum clean all
 sudo yum update -y
 sudo yum makecache
 
-sudo yum --enablerepo=base,updates,extras install perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git
+sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git
 
 wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash
 
