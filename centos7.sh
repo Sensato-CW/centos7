@@ -23,11 +23,16 @@ sudo yum clean all
 sudo yum update -y
 sudo yum makecache
 
-echo "Installing dependencies for CloudWave HIDS."
-sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git
+echo "Installing dependencies including expect for automation."
+sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git expect
 
-echo "Retrieving Installer."
-wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash -s -- <<< "yes"
+echo "Retrieving and executing Installer."
+expect -c "
+spawn wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash
+expect \"Do you agree to these terms?\"
+send \"yes\r\"
+interact
+"
 
 echo "Installing HIDS agent."
 sudo yum install -y ossec-hids-agent
