@@ -27,7 +27,7 @@ echo "Installing dependencies for CloudWave HIDS."
 sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git
 
 echo "Retrieving Installer."
-yes | wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash
+wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash -s -- <<< "yes"
 
 echo "Installing HIDS agent."
-sudo yum install ossec-hids-agent
+sudo yum install -y ossec-hids-agent
