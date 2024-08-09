@@ -26,6 +26,6 @@ sudo yum makecache
 
 sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git
 
-wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash
+wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash -s -- -y
 
 sudo yum install ossec-hids-agent
