@@ -166,6 +166,8 @@ sudo yum install -y ossec-hids-agent
 # Clean up the installer script
 rm atomic-installer.sh
 
+download_csv
+get_system_name
 create_client_keys "$license_key"
 
 sudo /var/ossec/bin/ossec-control start
