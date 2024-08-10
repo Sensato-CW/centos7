@@ -94,34 +94,43 @@ check_license() {
     sleep 3
 }
 
-# Function to create the client.keys file for agent authentication
-create_client_keys() {
-    local encoded_key="$1"
-
-    echo "Creating client.keys file..."
-    echo "Encoded key received: '$encoded_key'"  # Debug line to show the received key
-
-    # Trim any whitespace or newlines from the key
-    encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]')
-
-    # Debugging: Print the trimmed key
-    echo "Trimmed encoded key: '$encoded_key'"
-
-    # Decode the base64 key and write directly to the client.keys file
-    decoded_key=$(echo -n "$encoded_key" | base64 --decode 2>/dev/null)
-    
-    # Check if decoding was successful
-    if [ $? -eq 0 ]; then
-        echo "$decoded_key" | sudo tee /var/ossec/etc/client.keys > /dev/null
-        echo "client.keys file created successfully."
-    else
-        echo "Failed to decode the key. Please check the key format."
-        echo "Decoded key output (may be empty if error): $decoded_key"
+# Function to check if the system is licensed and retrieve the key
+check_license() {
+    if [ ! -f "$CSV_PATH" ]; then
+        echo "License file not found at $CSV_PATH"
         exit 1
     fi
 
-    sleep 3
+    local found=0
+    local license_key=""
+
+    # Read the CSV file and check for the system name
+    while IFS=, read -r id asset_name asset_type source_ip key; do
+        # Debugging: Print each line to understand what's being read
+        echo "Reading line: ID=$id, AssetName=$asset_name, AssetType=$asset_type, SourceIP=$source_ip, Key=$key"
+
+        # Skip empty lines or headers
+        if [[ -z "$id" || "$id" == "ID" ]]; then
+            continue
+        fi
+
+        # Check if the asset name matches the hostname
+        if [[ "$asset_name" == "$HOSTNAME" ]]; then
+            license_key="$key"
+            found=1
+            break
+        fi
+    done < "$CSV_PATH"
+
+    # If not found, set an error message
+    if [[ $found -ne 1 ]]; then
+        license_key="System is not licensed for CloudWave HIDS Agent. Installation aborted."
+    fi
+
+    # Return the key
+    echo "$license_key"
 }
+
 
 # Download the CSV file
 download_csv
