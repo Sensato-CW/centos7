@@ -104,14 +104,19 @@ create_client_keys() {
     # Trim any whitespace or newlines from the key
     encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]')
 
+    # Debugging: Print the trimmed key
+    echo "Trimmed encoded key: '$encoded_key'"
+
     # Decode the base64 key and write directly to the client.keys file
-    decoded_key=$(echo -n "$encoded_key" | base64 --decode)
-    echo $decoded_key
+    decoded_key=$(echo -n "$encoded_key" | base64 --decode 2>/dev/null)
+    
+    # Check if decoding was successful
     if [ $? -eq 0 ]; then
         echo "$decoded_key" | sudo tee /var/ossec/etc/client.keys > /dev/null
         echo "client.keys file created successfully."
     else
         echo "Failed to decode the key. Please check the key format."
+        echo "Decoded key output (may be empty if error): $decoded_key"
         exit 1
     fi
 
