@@ -46,8 +46,8 @@ except Exception as e:
 
 # Function to get the hostname without the domain
 get_system_name() {
-    HOSTNAME=$(hostname -s | tr -d '[:space:]')
-    echo "System name: '$HOSTNAME'"
+    HOSTNAME=$(hostname -s)
+    echo "System name: $HOSTNAME"
     sleep 3
 }
 
@@ -67,9 +67,16 @@ check_license() {
         asset_name=$(echo "$asset_name" | xargs)
         key=$(echo "$key" | xargs)
 
-        echo "Debugging: Comparing trimmed AssetName='$asset_name' with trimmed HOSTNAME='$HOSTNAME'"
+        # Debugging: Print the variables
+        echo "Debugging: Reading line: ID=$id, AssetName=$asset_name, SourceIP=$source_ip, Key=$key"
+
+        # Skip empty lines or headers
+        if [[ -z "$id" || "$id" == "ID" ]]; then
+            continue
+        fi
 
         # Check if the asset name matches the hostname
+        echo "Debugging: Comparing trimmed AssetName='$asset_name' with trimmed HOSTNAME='$HOSTNAME'"
         if [[ "$asset_name" == "$HOSTNAME" ]]; then
             license_key="$key"
             found=1
@@ -119,12 +126,8 @@ create_client_keys() {
     sleep 3
 }
 
-
 # Download the CSV file
 download_csv
-
-# Get the system name
-get_system_name
 
 # Retrieve the license key
 license_key=$(check_license)
@@ -182,6 +185,9 @@ sudo yum install -y ossec-hids-agent
 
 # Clean up the installer script
 rm atomic-installer.sh
+
+# Get the system name
+get_system_name
 
 # Create the client keys file
 create_client_keys "$license_key"
