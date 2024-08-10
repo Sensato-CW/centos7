@@ -61,16 +61,11 @@ check_license() {
     local license_key=""
     local found=0
 
-    echo "Reading CSV to check license..."
-
     # Read the CSV file and check for the system name
     while IFS=, read -r id asset_name asset_type source_ip key; do
         # Trim any leading or trailing whitespace from variables
         asset_name=$(echo "$asset_name" | xargs)
         key=$(echo "$key" | xargs)
-
-        # Debug output
-        echo "Reading line: ID=$id, AssetName=$asset_name, Key=$key"
 
         # Skip empty lines or headers
         if [[ -z "$id" || "$id" == "ID" ]]; then
@@ -83,7 +78,7 @@ check_license() {
             found=1
             break
         fi
-    done < "$CSV_PATH"
+    done < <(tail -n +4 "$CSV_PATH")
 
     # If not found, set an error message
     if [[ $found -ne 1 ]]; then
