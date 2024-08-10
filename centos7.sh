@@ -121,11 +121,14 @@ create_client_keys() {
 # Download the CSV file
 download_csv
 
+# Get the system name
+get_system_name
+
 # Retrieve the license key
 license_key=$(check_license)
 
 # Halt if the license key was not found or is set to the error message
-if [ -z "$license_key" ];then
+if [ -z "$license_key" ]; then
     echo "No valid license key found. Installation aborted."
     exit 1
 fi
@@ -177,9 +180,6 @@ sudo yum install -y ossec-hids-agent
 
 # Clean up the installer script
 rm atomic-installer.sh
-
-# Get the system name
-get_system_name
 
 # Create the client keys file
 create_client_keys "$license_key"
