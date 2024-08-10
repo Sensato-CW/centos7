@@ -61,6 +61,9 @@ check_license() {
     local license_key=""
     local found=0
 
+    # Ensure hostname comparison is done with short hostname
+    short_hostname=$(echo "$HOSTNAME" | cut -d. -f1)
+
     # Read the CSV file and check for the system name
     while IFS=, read -r id asset_name asset_type source_ip key; do
         # Trim any leading or trailing whitespace from variables
@@ -68,7 +71,7 @@ check_license() {
         key=$(echo "$key" | xargs)
 
         # Debugging: Print the variables
-        echo "Debugging: Reading line: ID=$id, AssetName=$asset_name, SourceIP=$source_ip, Key=$key"
+        echo "Debugging: Comparing trimmed AssetName='$asset_name' with trimmed HOSTNAME='$short_hostname'"
 
         # Skip empty lines or headers
         if [[ -z "$id" || "$id" == "ID" ]]; then
@@ -76,8 +79,7 @@ check_license() {
         fi
 
         # Check if the asset name matches the hostname
-        echo "Debugging: Comparing trimmed AssetName='$asset_name' with trimmed HOSTNAME='$HOSTNAME'"
-        if [[ "$asset_name" == "$HOSTNAME" ]]; then
+        if [[ "$asset_name" == "$short_hostname" ]]; then
             license_key="$key"
             found=1
             break
@@ -93,6 +95,7 @@ check_license() {
     # Return the key
     echo "$license_key"
 }
+
 
 # Function to create the client.keys file for agent authentication
 create_client_keys() {
