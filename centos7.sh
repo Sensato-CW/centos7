@@ -25,7 +25,7 @@ sudo yum update -y
 sudo yum makecache
 
 echo "Installing dependencies for CloudWave HIDS."
-sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git
+sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git expect
 
 echo "Retrieving Installer."
 
