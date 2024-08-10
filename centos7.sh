@@ -67,7 +67,11 @@ check_license() {
         asset_name=$(echo "$asset_name" | xargs)
         key=$(echo "$key" | xargs)
 
-        echo "Debugging: Comparing AssetName='$asset_name' with HOSTNAME='$HOSTNAME'"
+        echo "Debugging: Comparing trimmed AssetName='$asset_name' with trimmed HOSTNAME='$HOSTNAME'"
+
+        # Display the ASCII values of the characters for further debugging
+        echo "Debugging: AssetName ASCII values: $(echo -n "$asset_name" | od -An -t dC)"
+        echo "Debugging: HOSTNAME ASCII values: $(echo -n "$HOSTNAME" | od -An -t dC)"
 
         # Check if the asset name matches the hostname
         if [[ "$asset_name" == "$HOSTNAME" ]]; then
