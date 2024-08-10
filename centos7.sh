@@ -28,9 +28,6 @@ echo "Installing dependencies for CloudWave HIDS."
 sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git expect
 
 echo "Retrieving Installer."
-
-# Using expect to handle the interactive prompt
-echo "Retrieving Installer."
 expect <<- EOF
 spawn wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash
 expect "Do you agree to these terms?" { send "yes\r" }
