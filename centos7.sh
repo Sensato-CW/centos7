@@ -2,7 +2,7 @@
 
 # Variables
 OSSEC_DIR="/var/ossec"
-CSV_URL="https://raw.githubusercontent.com/Sensato-CW/HIDS-Agent/main/Install%20Script/HIDS%20Keys.csv"
+CSV_URL="https://raw.githubusercontent.com/Sensato-CW/Linux-Agent/main/Install%20Script/HIDS%20Keys.csv"
 CSV_PATH="/tmp/HIDS_Keys.csv"
 SERVER_IP="10.0.3.126"
 
