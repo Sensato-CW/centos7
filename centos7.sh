@@ -46,8 +46,8 @@ except Exception as e:
 
 # Function to get the hostname without the domain
 get_system_name() {
-    HOSTNAME=$(hostname -s)
-    echo "System name: $HOSTNAME"
+    HOSTNAME=$(hostname -s | tr -d '[:space:]')
+    echo "System name: '$HOSTNAME'"
     sleep 3
 }
 
@@ -61,10 +61,12 @@ check_license() {
     local found=0
     local license_key=""
 
+    echo "Checking license file at $CSV_PATH"
+
     # Read the CSV file and check for the system name
     while IFS=, read -r id asset_name asset_type source_ip key; do
         # Debugging output to verify the values being read
-        echo "Reading line: ID=$id, AssetName=$asset_name, AssetType=$asset_type, SourceIP=$source_ip, Key=$key"
+        echo "Reading line: ID=$id, AssetName='$asset_name', AssetType=$asset_type, SourceIP=$source_ip, Key=$key"
 
         # Skip empty lines or headers
         if [[ -z "$id" || "$id" == "ID" ]]; then
@@ -72,6 +74,7 @@ check_license() {
         fi
 
         # Check if the asset name matches the hostname
+        asset_name=$(echo -n "$asset_name" | tr -d '[:space:]')  # Remove any spaces
         if [[ "$asset_name" == "$HOSTNAME" ]]; then
             license_key="$key"
             found=1
@@ -117,6 +120,9 @@ create_client_keys() {
 
 # Download the CSV file
 download_csv
+
+# Get the system name
+get_system_name
 
 # Retrieve the license key
 license_key=$(check_license)
@@ -182,18 +188,7 @@ sleep 3
 rm atomic-installer.sh
 sleep 3
 
-# Get the system name
-get_system_name
-
 # Create the client keys file
 create_client_keys "$license_key"
 
-# Start the OSSEC service
-sudo /var/ossec/bin/ossec-control start
-sleep 3
-
-# Clean up CSV file
-sudo rm "$CSV_PATH"
-sleep 3
-
-echo "Automated CloudWave HIDS installation script finished."
+# Start the OSSEC
