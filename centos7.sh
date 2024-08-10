@@ -27,10 +27,17 @@ sudo yum makecache
 echo "Installing dependencies for CloudWave HIDS."
 sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git expect
 
-# Automate wget command using expect
+# Download the installer script
 echo "Retrieving Installer."
+wget -q -O atomic-installer.sh https://updates.atomicorp.com/installers/atomic
+
+# Make the installer executable
+chmod +x atomic-installer.sh
+
+# Automate installation using expect
+echo "Automating installation."
 expect <<- EOF
-spawn wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash
+spawn sudo ./atomic-installer.sh
 expect "Do you agree to these terms?" { send "yes\r" }
 expect eof
 EOF
@@ -38,3 +45,6 @@ EOF
 # Install OSSEC HIDS agent
 echo "Installing HIDS agent."
 sudo yum install -y ossec-hids-agent
+
+# Clean up the installer script
+rm atomic-installer.sh
