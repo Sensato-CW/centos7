@@ -67,6 +67,8 @@ check_license() {
         asset_name=$(echo "$asset_name" | xargs)
         key=$(echo "$key" | xargs)
 
+        echo "Debugging: Reading line: ID=$id, AssetName=$asset_name, SourceIP=$source_ip, Key=$key"  # Debugging output
+
         # Check if the asset name matches the hostname
         if [[ "$asset_name" == "$HOSTNAME" ]]; then
             license_key="$key"
