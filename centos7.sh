@@ -58,13 +58,14 @@ check_license() {
         exit 1
     fi
 
-    local found=0
     local license_key=""
+    local found=0
 
     # Read the CSV file and check for the system name
     while IFS=, read -r id asset_name asset_type source_ip key; do
-        # Debugging: Print each line to understand what's being read
-        echo "Reading line: ID=$id, AssetName=$asset_name, AssetType=$asset_type, SourceIP=$source_ip, Key=$key"
+        # Trim any leading or trailing whitespace from variables
+        asset_name=$(echo "$asset_name" | xargs)
+        key=$(echo "$key" | xargs)
 
         # Skip empty lines or headers
         if [[ -z "$id" || "$id" == "ID" ]]; then
@@ -81,61 +82,45 @@ check_license() {
 
     # If not found, set an error message
     if [[ $found -ne 1 ]]; then
-        license_key="System is not licensed for CloudWave HIDS Agent. Installation aborted."
-    fi
-
-    # Return the key
-    echo "$license_key"
-    sleep 3
-}
-
-# Function to check if the system is licensed and retrieve the key
-check_license() {
-    if [ ! -f "$CSV_PATH" ]; then
-        echo "License file not found at $CSV_PATH"
+        echo "System is not licensed for CloudWave HIDS Agent. Installation aborted."
         exit 1
     fi
 
-    local found=0
-    local license_key=""
-
-    # Read the CSV file and check for the system name
-    while IFS=, read -r id asset_name asset_type source_ip key; do
-        # Skip empty lines or headers
-        if [[ -z "$id" || "$id" == "ID" || "$asset_name" == "" ]]; then
-            continue
-        fi
-
-        # Check if the asset name matches the hostname
-        if [[ "$asset_name" == "$HOSTNAME" ]]; then
-            license_key="$key"
-            found=1
-            break
-        fi
-    done < "$CSV_PATH"
-
-    # If not found, set an error message
-    if [[ $found -ne 1 ]]; then
-        license_key="System is not licensed for CloudWave HIDS Agent. Installation aborted."
-    fi
-
     # Return the key
     echo "$license_key"
 }
 
+# Function to create the client.keys file for agent authentication
+create_client_keys() {
+    local encoded_key="$1"
 
+    echo "Creating client.keys file..."
+    echo "Encoded key received: '$encoded_key'"  # Debug line to show the received key
+
+    # Trim any whitespace or newlines from the key
+    encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]')
+
+    # Decode the base64 key and write directly to the client.keys file
+    decoded_key=$(echo -n "$encoded_key" | base64 --decode)
+    if [ $? -eq 0 ]; then
+        echo "$decoded_key" | sudo tee /var/ossec/etc/client.keys > /dev/null
+        echo "client.keys file created successfully."
+    else
+        echo "Failed to decode the key. Please check the key format."
+        exit 1
+    fi
+
+    sleep 3
+}
 
 # Download the CSV file
 download_csv
-
-# Get the system name
-get_system_name
 
 # Retrieve the license key
 license_key=$(check_license)
 
 # Halt if the license key was not found or is set to the error message
-if [ -z "$license_key" ] || [ "$license_key" == "System is not licensed for CloudWave HIDS Agent. Installation aborted." ]; then
+if [ -z "$license_key" ]; then
     echo "No valid license key found. Installation aborted."
     exit 1
 fi
@@ -187,6 +172,9 @@ sudo yum install -y ossec-hids-agent
 
 # Clean up the installer script
 rm atomic-installer.sh
+
+# Get the system name
+get_system_name
 
 # Create the client keys file
 create_client_keys "$license_key"
