@@ -97,8 +97,17 @@ create_client_keys() {
     # Trim any whitespace or newlines from the key
     encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]')
 
+    # Debugging: Check the length of the encoded key
+    echo "Trimmed encoded key: '$encoded_key' (length: ${#encoded_key})"
+
+    # Validate if the key is valid base64 by checking its length (base64 strings should be a multiple of 4)
+    if [ $((${#encoded_key} % 4)) -ne 0 ]; then
+        echo "Invalid base64 key format. Length is not a multiple of 4."
+        exit 1
+    fi
+
     # Decode the base64 key and write directly to the client.keys file
-    decoded_key=$(echo -n "$encoded_key" | base64 --decode)
+    decoded_key=$(echo -n "$encoded_key" | base64 --decode 2>/dev/null)
     if [ $? -eq 0 ]; then
         echo "$decoded_key" | sudo tee /var/ossec/etc/client.keys > /dev/null
         echo "client.keys file created successfully."
@@ -109,6 +118,7 @@ create_client_keys() {
 
     sleep 3
 }
+
 
 # Download the CSV file
 download_csv
