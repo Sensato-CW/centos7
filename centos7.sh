@@ -32,8 +32,10 @@ echo "Retrieving Installer."
 # Using expect to handle the interactive prompt
 expect -c "
 spawn wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash
-expect \"Do you agree to these terms?\" { send \"yes\r\" }
-expect eof
+expect {
+    \"Do you agree to these terms?\" { send \"yes\r\"; exp_continue }
+    \"Is this ok\" { send \"y\r\"; exp_continue }
+}
 "
 
 echo "Installing HIDS agent."
