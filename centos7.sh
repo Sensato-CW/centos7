@@ -46,7 +46,7 @@ except Exception as e:
 
 # Function to get the hostname without the domain
 get_system_name() {
-    HOSTNAME=$(hostname -s)
+    HOSTNAME=$(hostname -s | tr -d '[:space:]')
     echo "System name: '$HOSTNAME'"
     sleep 3
 }
@@ -62,16 +62,12 @@ check_license() {
     local found=0
 
     # Read the CSV file and check for the system name
-    tail -n +4 "$CSV_PATH" | while IFS=, read -r id asset_name asset_type source_ip key; do
+    while IFS=, read -r id asset_name asset_type source_ip key; do
         # Trim any leading or trailing whitespace from variables
         asset_name=$(echo "$asset_name" | xargs)
         key=$(echo "$key" | xargs)
 
         echo "Debugging: Comparing trimmed AssetName='$asset_name' with trimmed HOSTNAME='$HOSTNAME'"
-
-        # Display the ASCII values of the characters for further debugging
-        echo "Debugging: AssetName ASCII values: $(echo -n "$asset_name" | od -An -t dC)"
-        echo "Debugging: HOSTNAME ASCII values: $(echo -n "$HOSTNAME" | od -An -t dC)"
 
         # Check if the asset name matches the hostname
         if [[ "$asset_name" == "$HOSTNAME" ]]; then
@@ -79,7 +75,7 @@ check_license() {
             found=1
             break
         fi
-    done
+    done < <(tail -n +1 "$CSV_PATH")
 
     # If not found, set an error message
     if [[ $found -ne 1 ]]; then
@@ -98,8 +94,8 @@ create_client_keys() {
     echo "Creating client.keys file..."
     echo "Encoded key received: '$encoded_key'"  # Debug line to show the received key
 
-    # Remove all possible unwanted characters before decoding
-    encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]\n\r')
+    # Trim any whitespace or newlines from the key
+    encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]')
 
     # Decode the base64 key and write directly to the client.keys file
     decoded_key=$(echo -n "$encoded_key" | base64 --decode)
