@@ -92,7 +92,7 @@ create_client_keys() {
     local encoded_key="$1"
 
     echo "Creating client.keys file..."
-    echo "Encoded key received: $encoded_key"  # Debug line to show the received key
+    echo "Encoded key received: '$encoded_key'"  # Debug line to show the received key
 
     # Trim any whitespace or newlines from the key
     encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]')
