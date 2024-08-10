@@ -75,7 +75,7 @@ check_license() {
             found=1
             break
         fi
-    done < <(tail -n +1 "$CSV_PATH")
+    done < "$CSV_PATH"
 
     # If not found, set an error message
     if [[ $found -ne 1 ]]; then
