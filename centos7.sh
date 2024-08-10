@@ -109,6 +109,9 @@ create_client_keys() {
     sleep 4
 }
 
+# Download the CSV file
+download_csv
+
 # Retrieve the license key
 license_key=$(check_license)
 
@@ -166,11 +169,16 @@ sudo yum install -y ossec-hids-agent
 # Clean up the installer script
 rm atomic-installer.sh
 
-download_csv
+# Get the system name
 get_system_name
+
+# Create the client keys file
 create_client_keys "$license_key"
 
+# Start the OSSEC service
 sudo /var/ossec/bin/ossec-control start
-sudo rm /tmp/HIDS_Keys.csv
+
+# Clean up CSV file
+sudo rm "$CSV_PATH"
 
 echo "Automated CloudWave HIDS installation script finished."
