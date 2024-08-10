@@ -94,8 +94,8 @@ create_client_keys() {
     echo "Creating client.keys file..."
     echo "Encoded key received: '$encoded_key'"  # Debug line to show the received key
 
-    # Trim any whitespace or newlines from the key
-    encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]')
+    # Remove all possible unwanted characters before decoding
+    encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]\n\r')
 
     # Decode the base64 key and write directly to the client.keys file
     decoded_key=$(echo -n "$encoded_key" | base64 --decode)
