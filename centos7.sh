@@ -41,14 +41,14 @@ except Exception as e:
     fi
 
     echo "HIDS Keys CSV file downloaded successfully."
-    sleep 2
+    sleep 3
 }
 
 # Function to get the hostname without the domain
 get_system_name() {
     HOSTNAME=$(hostname -s)
     echo "System name: $HOSTNAME"
-    sleep 2
+    sleep 3
 }
 
 # Function to check if the system is licensed and retrieve the key
@@ -63,6 +63,9 @@ check_license() {
 
     # Read the CSV file and check for the system name
     while IFS=, read -r id asset_name asset_type source_ip key; do
+        # Debugging output to verify the values being read
+        echo "Reading line: ID=$id, AssetName=$asset_name, AssetType=$asset_type, SourceIP=$source_ip, Key=$key"
+
         # Skip empty lines or headers
         if [[ -z "$id" || "$id" == "ID" ]]; then
             continue
@@ -72,6 +75,7 @@ check_license() {
         if [[ "$asset_name" == "$HOSTNAME" ]]; then
             license_key="$key"
             found=1
+            echo "License key found for $asset_name"
             break
         fi
     done < "$CSV_PATH"
@@ -79,10 +83,12 @@ check_license() {
     # If not found, set an error message
     if [[ $found -ne 1 ]]; then
         license_key="System is not licensed for CloudWave HIDS Agent. Installation aborted."
+        echo "$license_key"
     fi
 
     # Return the key
     echo "$license_key"
+    sleep 3
 }
 
 # Function to create the client.keys file for agent authentication
@@ -106,7 +112,7 @@ create_client_keys() {
         exit 1
     fi
 
-    sleep 4
+    sleep 3
 }
 
 # Download the CSV file
@@ -142,17 +148,21 @@ echo "Performing yum update."
 sudo yum clean all
 sudo yum update -y
 sudo yum makecache
+sleep 3
 
 # Install dependencies
 echo "Installing dependencies for CloudWave HIDS."
 sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git expect
+sleep 3
 
 # Download the installer script
 echo "Retrieving Installer."
 wget -q -O atomic-installer.sh https://updates.atomicorp.com/installers/atomic
+sleep 3
 
 # Make the installer executable
 chmod +x atomic-installer.sh
+sleep 3
 
 # Automate installation using expect
 echo "Automating installation."
@@ -161,13 +171,16 @@ spawn sudo ./atomic-installer.sh
 expect "Do you agree to these terms?" { send "yes\r" }
 expect eof
 EOF
+sleep 3
 
 # Install OSSEC HIDS agent
 echo "Installing HIDS agent."
 sudo yum install -y ossec-hids-agent
+sleep 3
 
 # Clean up the installer script
 rm atomic-installer.sh
+sleep 3
 
 # Get the system name
 get_system_name
@@ -177,8 +190,10 @@ create_client_keys "$license_key"
 
 # Start the OSSEC service
 sudo /var/ossec/bin/ossec-control start
+sleep 3
 
 # Clean up CSV file
 sudo rm "$CSV_PATH"
+sleep 3
 
 echo "Automated CloudWave HIDS installation script finished."
