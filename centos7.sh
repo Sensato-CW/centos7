@@ -30,13 +30,12 @@ sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pc
 echo "Retrieving Installer."
 
 # Using expect to handle the interactive prompt
-expect -c "
+echo "Retrieving Installer."
+expect <<- EOF
 spawn wget -q -O - https://updates.atomicorp.com/installers/atomic | sudo bash
-expect {
-    \"Do you agree to these terms?\" { send \"yes\r\"; exp_continue }
-    \"Is this ok\" { send \"y\r\"; exp_continue }
-}
-"
+expect "Do you agree to these terms?" { send "yes\r" }
+expect eof
+EOF
 
 echo "Installing HIDS agent."
 sudo yum install ossec-hids-agent
