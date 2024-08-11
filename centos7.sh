@@ -5,6 +5,9 @@ OSSEC_DIR="/var/ossec"
 CSV_URL="https://raw.githubusercontent.com/Sensato-CW/Linux-Agent/main/Install%20Script/HIDS%20Keys.csv"
 CSV_PATH="/tmp/HIDS_Keys.csv"
 SERVER_IP="10.0.3.126"
+AGENT_CONF="$OSSEC_DIR/etc/ossec-agent.conf"
+OSSEC_CONF="$OSSEC_DIR/etc/ossec.conf"
+INTERNAL_OPTIONS="$OSSEC_DIR/etc/internal_options.conf"
 
 # Backup existing repo settings
 echo "Backing up repository settings."
@@ -99,16 +102,12 @@ create_client_keys() {
     # Trim any whitespace or newlines from the key
     license_key=$(echo -n "$license_key" | tr -d '[:space:]')
 
-    # Debugging: Check the length of the license key
-    #echo "Key length: $(echo -n "$license_key" | wc -c)"
-
     # Decode the base64 key and write directly to the client.keys file
     decoded_key=$(echo -n "$license_key" | base64 --decode)
     if [ $? -eq 0 ]; then
-	    sleep 2
         echo "$decoded_key" | sudo tee /var/ossec/etc/client.keys > /dev/null
         echo "client.keys file created successfully."
-		sleep 2
+        sleep 2
     else
         echo "Failed to decode the key. Please check the key format."
         exit 1
@@ -119,24 +118,45 @@ create_client_keys() {
 
 # Function to update the agent configuration with the correct server IP
 update_agent_conf() {
-    local agent_conf="$OSSEC_DIR/etc/ossec-agent.conf"
     echo "Updating ossec-agent.conf with server IP: $SERVER_IP"
 
     # Check if the file exists
-    if [ ! -f "$agent_conf" ]; then
-        echo "Agent configuration file not found at $agent_conf"
+    if [ ! -f "$AGENT_CONF" ]; then
+        echo "Agent configuration file not found at $AGENT_CONF"
         exit 1
     fi
 
     # Replace or add the server-ip entry in ossec-agent.conf
-    if grep -q "<server-ip>" "$agent_conf"; then
-        sudo sed -i "s|<server-ip>.*</server-ip>|<server-ip>$SERVER_IP</server-ip>|" "$agent_conf"
+    if grep -q "<server-ip>" "$AGENT_CONF"; then
+        sudo sed -i "s|<server-ip>.*</server-ip>|<server-ip>$SERVER_IP</server-ip>|" "$AGENT_CONF"
     else
         # Insert the server-ip entry before the closing </ossec_config> tag
-        sudo sed -i "/<\/ossec_config>/i <client><server-ip>$SERVER_IP</server-ip></client>" "$agent_conf"
+        sudo sed -i "/<\/ossec_config>/i <client><server-ip>$SERVER_IP</server-ip></client>" "$AGENT_CONF"
     fi
 
     echo "Agent configuration updated successfully."
+}
+
+# Function to remove duplicate entries from ossec.conf
+remove_entries_from_ossec_conf() {
+    echo "Removing duplicate entries from ossec.conf."
+
+    sudo sed -i '/<agent_config>/,/<\/agent_config>/d' "$OSSEC_CONF"
+
+    echo "Duplicate entries removed from ossec.conf."
+}
+
+# Function to update internal_options.conf
+update_internal_options() {
+    echo "Updating internal_options.conf for remote commands."
+
+    if grep -q "logcollector.remote_commands" "$INTERNAL_OPTIONS"; then
+        sudo sed -i 's/^logcollector.remote_commands=.*/logcollector.remote_commands=1/' "$INTERNAL_OPTIONS"
+    else
+        echo "logcollector.remote_commands=1" | sudo tee -a "$INTERNAL_OPTIONS" > /dev/null
+    fi
+
+    echo "internal_options.conf updated successfully."
 }
 
 
@@ -205,8 +225,15 @@ sleep 5
 # After installation, create the client keys file and set the server
 create_client_keys "$license_key"
 sleep 3
-# Append the configuration to agent.conf
+
+# Update the agent configuration to include the server IP
 update_agent_conf
+
+# Remove duplicate entries from ossec.conf
+remove_entries_from_ossec_conf
+
+# Update internal_options.conf to allow remote commands
+update_internal_options
 
 # Start the OSSEC service
 sudo /var/ossec/bin/ossec-control start
