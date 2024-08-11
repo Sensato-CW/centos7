@@ -176,6 +176,9 @@ sudo yum install -y ossec-hids-agent
 # Clean up the installer script
 rm atomic-installer.sh
 
+# Add a delay to ensure the installation process completes
+sleep 5
+
 # After installation, create the client keys file
 create_client_keys "$license_key"
 
