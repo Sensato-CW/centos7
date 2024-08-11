@@ -13,70 +13,92 @@ sudo cp /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.bak
 # Function to download the HIDS Keys CSV file
 download_csv() {
     echo "Downloading HIDS Keys CSV file..."
+
+    # Remove existing file if it exists
     if [ -f "$CSV_PATH" ]; then
         sudo rm -f "$CSV_PATH"
     fi
+
+    # Download using available tools
     if command -v wget > /dev/null; then
         sudo wget -q -O "$CSV_PATH" "$CSV_URL" || { echo "Failed to download HIDS Keys CSV file with wget. Installation aborted."; exit 1; }
     elif command -v curl > /dev/null; then
         sudo curl -sS -o "$CSV_PATH" "$CSV_URL" || { echo "Failed to download HIDS Keys CSV file with curl. Installation aborted."; exit 1; }
+    elif command -v python3 > /dev/null || command -v python > /dev/null; then
+        python_version=$(command -v python3 > /dev/null && echo "python3" || echo "python")
+        sudo $python_version -c "
+import urllib.request
+try:
+    urllib.request.urlretrieve('$CSV_URL', '$CSV_PATH')
+    print('HIDS Keys CSV file downloaded successfully.')
+except Exception as e:
+    print(f'Failed to download HIDS Keys CSV file with Python. Installation aborted: {e}')
+    exit(1)
+" || exit 1
     else
-        echo "No suitable download tool available. Installation aborted."
+        echo "No suitable download tool available (wget, curl, python). Installation aborted."
         exit 1
     fi
+
     echo "HIDS Keys CSV file downloaded successfully."
     sleep 3
 }
 
-# Function to get the short hostname without the domain
+# Function to get the hostname without the domain
 get_system_name() {
     HOSTNAME=$(hostname -s)
     echo "System name: $HOSTNAME"
     sleep 3
 }
 
-# Function to check if the system is licensed and retrieve the key
+# Function to check if the system is licensed
 check_license() {
     if [ ! -f "$CSV_PATH" ]; then
         echo "License file not found at $CSV_PATH"
         exit 1
     fi
 
-    local license_key=""
     local found=0
-    short_hostname=$(echo "$HOSTNAME" | cut -d. -f1)
 
+    # Read the CSV file and check for the system name
     while IFS=, read -r id asset_name asset_type source_ip key; do
+        # Trim any leading or trailing whitespace from variables
         asset_name=$(echo "$asset_name" | xargs)
-        key=$(echo "$key" | xargs)
-        if [[ "$asset_name" == "$short_hostname" ]]; then
-            license_key="$key"
+
+        # Skip empty lines or headers
+        if [[ -z "$id" || "$id" == "ID" ]]; then
+            continue
+        fi
+
+        # Check if the asset name matches the hostname
+        if [[ "$asset_name" == "$HOSTNAME" ]]; then
             found=1
             break
         fi
     done < "$CSV_PATH"
 
+    # If not found, set an error message
     if [[ $found -ne 1 ]]; then
         echo "System is not licensed for CloudWave HIDS Agent. Installation aborted."
         exit 1
     fi
-
-    echo "$license_key"
 }
 
 # Function to create the client.keys file for agent authentication
 create_client_keys() {
-    local encoded_key="$1"
+    local license_key="$1"
 
     echo "Creating client.keys file..."
-    # Ensure the key does not include unintended data
-    encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]')
+    echo "Encoded key received: '$license_key'"  # Debug line to show the received key
 
-    # Debugging: Check the length of the encoded key
-    echo "Length of encoded key: $(echo -n "$encoded_key" | wc -c)"
+    # Trim any whitespace or newlines from the key
+    license_key=$(echo -n "$license_key" | tr -d '[:space:]')
+
+    # Debugging: Check the length of the license key
+    echo "Key length: $(echo -n "$license_key" | wc -c)"
 
     # Decode the base64 key and write directly to the client.keys file
-    decoded_key=$(echo -n "$encoded_key" | base64 --decode 2>/dev/null)
+    decoded_key=$(echo -n "$license_key" | base64 --decode)
     if [ $? -eq 0 ]; then
         echo "$decoded_key" | sudo tee /var/ossec/etc/client.keys > /dev/null
         echo "client.keys file created successfully."
@@ -94,20 +116,8 @@ download_csv
 # Get the system name
 get_system_name
 
-# Retrieve the license key
-license_key=$(check_license)
-
-# Halt if the license key was not found
-if [ -z "$license_key" ]; then
-    echo "No valid license key found. Installation aborted."
-    exit 1
-fi
-
-# Debugging: Print the license key before using it
-echo "License key before creating client.keys: $license_key"
-
-# Create the client keys file
-create_client_keys "$license_key"
+# Check license before proceeding with installation
+check_license
 
 # Update repo URLs
 echo "Updating the repository."
@@ -153,6 +163,12 @@ sudo yum install -y ossec-hids-agent
 
 # Clean up the installer script
 rm atomic-installer.sh
+
+# Retrieve the license key
+license_key=$(check_license)
+
+# Create the client keys file
+create_client_keys "$license_key"
 
 # Start the OSSEC service
 sudo /var/ossec/bin/ossec-control start
