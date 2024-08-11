@@ -105,8 +105,10 @@ create_client_keys() {
     # Decode the base64 key and write directly to the client.keys file
     decoded_key=$(echo -n "$license_key" | base64 --decode)
     if [ $? -eq 0 ]; then
+	    sleep 2
         echo "$decoded_key" | sudo tee /var/ossec/etc/client.keys > /dev/null
         echo "client.keys file created successfully."
+		sleep 2
     else
         echo "Failed to decode the key. Please check the key format."
         exit 1
