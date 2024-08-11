@@ -119,21 +119,26 @@ create_client_keys() {
 
 # Function to update the agent configuration with the correct server IP
 update_agent_conf() {
+    local agent_conf="$OSSEC_DIR/etc/ossec-agent.conf"
     echo "Updating ossec-agent.conf with server IP: $SERVER_IP"
 
-    # Check for existing server-ip entry and replace it
-    if grep -q "<server-ip>" "$AGENT_CONF"; then
-        sudo sed -i "s|<server-ip>.*</server-ip>|<server-ip>$SERVER_IP</server-ip>|" "$AGENT_CONF"
-    else
-        # If no server-ip entry is found, add it
-        echo "<ossec_config><client><server-ip>$SERVER_IP</server-ip></client></ossec_config>" | sudo tee -a "$AGENT_CONF" > /dev/null
+    # Check if the file exists
+    if [ ! -f "$agent_conf" ]; then
+        echo "Agent configuration file not found at $agent_conf"
+        exit 1
     fi
 
-    # Check and remove any duplicates if needed
-    awk '!seen[$0]++' "$AGENT_CONF" > /tmp/ossec-agent.tmp && sudo mv /tmp/ossec-agent.tmp "$AGENT_CONF"
+    # Replace or add the server-ip entry in ossec-agent.conf
+    if grep -q "<server-ip>" "$agent_conf"; then
+        sudo sed -i "s|<server-ip>.*</server-ip>|<server-ip>$SERVER_IP</server-ip>|" "$agent_conf"
+    else
+        # Insert the server-ip entry before the closing </ossec_config> tag
+        sudo sed -i "/<\/ossec_config>/i <client><server-ip>$SERVER_IP</server-ip></client>" "$agent_conf"
+    fi
 
     echo "Agent configuration updated successfully."
 }
+
 
 # Main script flow
 
