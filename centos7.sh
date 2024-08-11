@@ -5,6 +5,7 @@ OSSEC_DIR="/var/ossec"
 CSV_URL="https://raw.githubusercontent.com/Sensato-CW/Linux-Agent/main/Install%20Script/HIDS%20Keys.csv"
 CSV_PATH="/tmp/HIDS_Keys.csv"
 SERVER_IP="10.0.3.126"
+AGENT_CONF="/var/ossec/etc/ossec-agent.conf"
 
 # Backup existing repo settings
 echo "Backing up repository settings."
@@ -13,13 +14,10 @@ sudo cp /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.bak
 # Function to download the HIDS Keys CSV file
 download_csv() {
     echo "Downloading HIDS Keys CSV file..."
-
-    # Remove existing file if it exists
     if [ -f "$CSV_PATH" ]; then
         sudo rm -f "$CSV_PATH"
     fi
 
-    # Download using available tools
     if command -v wget > /dev/null; then
         sudo wget -q -O "$CSV_PATH" "$CSV_URL" || { echo "Failed to download HIDS Keys CSV file with wget. Installation aborted."; exit 1; }
     elif command -v curl > /dev/null; then
@@ -51,8 +49,8 @@ get_system_name() {
     sleep 3
 }
 
-# Function to retrieve the license key
-retrieve_license_key() {
+# Function to check if the system is licensed and retrieve the key
+check_license() {
     if [ ! -f "$CSV_PATH" ]; then
         echo "License file not found at $CSV_PATH"
         exit 1
@@ -86,29 +84,25 @@ retrieve_license_key() {
         exit 1
     fi
 
+    # Return the key
     echo "$license_key"
 }
 
 # Function to create the client.keys file for agent authentication
 create_client_keys() {
-    local license_key="$1"
+    local encoded_key="$1"
 
     echo "Creating client.keys file..."
-    echo "Encoded key received: '$license_key'"  # Debug line to show the received key
+    echo "Encoded key received: '$encoded_key'"  # Debug line to show the received key
 
     # Trim any whitespace or newlines from the key
-    license_key=$(echo -n "$license_key" | tr -d '[:space:]')
-
-    # Debugging: Check the length of the license key
-    echo "Key length: $(echo -n "$license_key" | wc -c)"
+    encoded_key=$(echo -n "$encoded_key" | tr -d '[:space:]')
 
     # Decode the base64 key and write directly to the client.keys file
-    decoded_key=$(echo -n "$license_key" | base64 --decode)
+    decoded_key=$(echo -n "$encoded_key" | base64 --decode)
     if [ $? -eq 0 ]; then
-	    sleep 2
         echo "$decoded_key" | sudo tee /var/ossec/etc/client.keys > /dev/null
         echo "client.keys file created successfully."
-		sleep 2
     else
         echo "Failed to decode the key. Please check the key format."
         exit 1
@@ -117,40 +111,34 @@ create_client_keys() {
     sleep 3
 }
 
-# Main script flow
+# Function to update the agent configuration with the correct server IP
+update_agent_conf() {
+    echo "Updating ossec-agent.conf with server IP: $SERVER_IP"
 
-# Download the CSV file
+    # Check for existing server-ip entry and replace it
+    if grep -q "<server-ip>" "$AGENT_CONF"; then
+        sudo sed -i "s|<server-ip>.*</server-ip>|<server-ip>$SERVER_IP</server-ip>|" "$AGENT_CONF"
+    else
+        # If no server-ip entry is found, add it
+        echo "<ossec_config><client><server-ip>$SERVER_IP</server-ip></client></ossec_config>" | sudo tee -a "$AGENT_CONF" > /dev/null
+    fi
+
+    # Check and remove any duplicates if needed
+    awk '!seen[$0]++' "$AGENT_CONF" > /tmp/ossec-agent.tmp && sudo mv /tmp/ossec-agent.tmp "$AGENT_CONF"
+
+    echo "Agent configuration updated successfully."
+}
+
+# Start the installation process
 download_csv
-
-# Get the system name
 get_system_name
 
-# Retrieve the license key before proceeding with installation
-license_key=$(retrieve_license_key)
-
-# Debugging: Print the license key before using it
-echo "License key before creating client.keys: $license_key"
-
-# Update repo URLs
-echo "Updating the repository."
-sudo sed -i 's|^mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os&infra=$infra|#mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os&infra=$infra|' /etc/yum.repos.d/CentOS-Base.repo
-sudo sed -i 's|^#baseurl=http://mirror.centos.org/centos/$releasever/os/$basearch/|baseurl=http://vault.centos.org/centos/$releasever/os/$basearch/|' /etc/yum.repos.d/CentOS-Base.repo
-
-sudo sed -i 's|^mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=updates&infra=$infra|#mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=updates&infra=$infra|' /etc/yum.repos.d/CentOS-Base.repo
-sudo sed -i 's|^#baseurl=http://mirror.centos.org/centos/$releasever/updates/$basearch/|baseurl=http://vault.centos.org/centos/$releasever/updates/$basearch/|' /etc/yum.repos.d/CentOS-Base.repo
-
-sudo sed -i 's|^mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=extras&infra=$infra|#mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=extras&infra=$infra|' /etc/yum.repos.d/CentOS-Base.repo
-sudo sed -i 's|^#baseurl=http://mirror.centos.org/centos/$releasever/extras/$basearch/|baseurl=http://vault.centos.org/centos/$releasever/extras/$basearch/|' /etc/yum.repos.d/CentOS-Base.repo
-
-sudo sed -i 's|^enabled=1|enabled=0|' /etc/yum.repos.d/CentOS-Base.repo
-
-# Perform yum update
+# Perform yum update and install dependencies
 echo "Performing yum update."
 sudo yum clean all
 sudo yum update -y
 sudo yum makecache
 
-# Install dependencies
 echo "Installing dependencies for CloudWave HIDS."
 sudo yum --enablerepo=base,updates,extras install -y perl gcc make zlib-devel pcre2-devel libevent-devel curl wget git expect
 
@@ -176,20 +164,19 @@ sudo yum install -y ossec-hids-agent
 # Clean up the installer script
 rm atomic-installer.sh
 
-# Add a delay to ensure the installation process completes
-sleep 5
+# Retrieve the license key after installation
+license_key=$(check_license)
 
-# Append the configuration to agent.conf
-echo "Adding server IP configuration to agent.conf."
-sudo bash -c "echo '<ossec_config><client><server-ip>${SERVER_IP}</server-ip></client></ossec_config>' >> /var/ossec/etc/shared/agent.conf"
+# If the key is valid, create the client.keys file and update the configuration
+if [ -n "$license_key" ]; then
+    create_client_keys "$license_key"
+    update_agent_conf
 
-# After installation, create the client keys file
-create_client_keys "$license_key"
+    # Start the OSSEC services
+    sudo /var/ossec/bin/ossec-control restart
 
-# Start the OSSEC service
-sudo /var/ossec/bin/ossec-control start
-
-# Clean up CSV file
-sudo rm "$CSV_PATH"
-
-echo "Automated CloudWave HIDS installation script finished."
+    echo "Automated CloudWave HIDS installation script finished."
+else
+    echo "No valid license key found. Installation aborted."
+    exit 1
+fi
