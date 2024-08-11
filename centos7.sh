@@ -51,19 +51,21 @@ get_system_name() {
     sleep 3
 }
 
-# Function to check if the system is licensed
-check_license() {
+# Function to retrieve the license key
+retrieve_license_key() {
     if [ ! -f "$CSV_PATH" ]; then
         echo "License file not found at $CSV_PATH"
         exit 1
     fi
 
+    local license_key=""
     local found=0
 
     # Read the CSV file and check for the system name
     while IFS=, read -r id asset_name asset_type source_ip key; do
         # Trim any leading or trailing whitespace from variables
         asset_name=$(echo "$asset_name" | xargs)
+        key=$(echo "$key" | xargs)
 
         # Skip empty lines or headers
         if [[ -z "$id" || "$id" == "ID" ]]; then
@@ -72,6 +74,7 @@ check_license() {
 
         # Check if the asset name matches the hostname
         if [[ "$asset_name" == "$HOSTNAME" ]]; then
+            license_key="$key"
             found=1
             break
         fi
@@ -82,6 +85,8 @@ check_license() {
         echo "System is not licensed for CloudWave HIDS Agent. Installation aborted."
         exit 1
     fi
+
+    echo "$license_key"
 }
 
 # Function to create the client.keys file for agent authentication
@@ -110,14 +115,19 @@ create_client_keys() {
     sleep 3
 }
 
+# Main script flow
+
 # Download the CSV file
 download_csv
 
 # Get the system name
 get_system_name
 
-# Check license before proceeding with installation
-check_license
+# Retrieve the license key before proceeding with installation
+license_key=$(retrieve_license_key)
+
+# Debugging: Print the license key before using it
+echo "License key before creating client.keys: $license_key"
 
 # Update repo URLs
 echo "Updating the repository."
@@ -164,10 +174,7 @@ sudo yum install -y ossec-hids-agent
 # Clean up the installer script
 rm atomic-installer.sh
 
-# Retrieve the license key
-license_key=$(check_license)
-
-# Create the client keys file
+# After installation, create the client keys file
 create_client_keys "$license_key"
 
 # Start the OSSEC service
