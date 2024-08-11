@@ -224,7 +224,6 @@ sleep 5
 
 # After installation, create the client keys file and set the server
 create_client_keys "$license_key"
-sleep 3
 
 # Update the agent configuration to include the server IP
 update_agent_conf
