@@ -144,8 +144,9 @@ comment_out_duplicates_in_ossec_conf() {
     sudo sed -i '/<directories.*etc/d' "$OSSEC_CONF"
     sudo sed -i '/<directories.*bin/d' "$OSSEC_CONF"
     sudo sed -i '/<directories.*sbin/d' "$OSSEC_CONF"
-    sudo sed -i '/<directories.*lib/d' "$OSSEC_CONF"
-    sudo sed -i '/<directories.*lib64/d' "$OSSEC_CONF"
+    #sudo sed -i '/<directories.*lib/d' "$OSSEC_CONF"
+    #sudo sed -i '/<directories.*lib64/d' "$OSSEC_CONF"
+	sudo sed -i '/<directories.*boot/d' "$OSSEC_CONF"
 
     echo "Duplicate entries commented out in ossec.conf."
 }
