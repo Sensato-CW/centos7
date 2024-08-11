@@ -159,7 +159,6 @@ update_internal_options() {
     echo "internal_options.conf updated successfully."
 }
 
-
 # Main script flow
 
 # Download the CSV file
