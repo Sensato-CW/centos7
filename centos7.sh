@@ -202,12 +202,10 @@ rm atomic-installer.sh
 # Add a delay to ensure the installation process completes
 sleep 5
 
-# Append the configuration to agent.conf
-echo "Adding server IP configuration to agent.conf."
-sudo bash -c "echo '<ossec_config><client><server-ip>${SERVER_IP}</server-ip></client></ossec_config>' >> /var/ossec/etc/shared/agent.conf"
-
 # After installation, create the client keys file and set the server
 create_client_keys "$license_key"
+sleep 3
+# Append the configuration to agent.conf
 update_agent_conf
 
 # Start the OSSEC service
