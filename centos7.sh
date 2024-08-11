@@ -161,6 +161,8 @@ EOF
 echo "Installing HIDS agent."
 sudo yum install -y ossec-hids-agent
 
+sleep 5
+
 # Clean up the installer script
 rm atomic-installer.sh
 
@@ -174,6 +176,7 @@ if [ -n "$license_key" ]; then
 
     # Start the OSSEC services
     sudo /var/ossec/bin/ossec-control restart
+	
 
     echo "Automated CloudWave HIDS installation script finished."
 else
