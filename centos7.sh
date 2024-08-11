@@ -137,15 +137,19 @@ update_agent_conf() {
     echo "Agent configuration updated successfully."
 }
 
-# Function to remove duplicate entries from ossec.conf
-remove_entries_from_ossec_conf() {
-    echo "Removing duplicate entries from ossec.conf."
+# Function to comment out duplicate entries from ossec.conf
+comment_out_duplicates_in_ossec_conf() {
+    echo "Commenting out duplicate entries in ossec.conf."
 
-    sudo sed -i 's|/etc</directories>|<!-- /etc</directories> -->|g' "$OSSEC_CONF"
-    sudo sed -i 's|/bin</directories>|<!-- /bin</directories> -->|g' "$OSSEC_CONF"
+    sudo sed -i '/<directories.*etc/d' "$OSSEC_CONF"
+    sudo sed -i '/<directories.*bin/d' "$OSSEC_CONF"
+    sudo sed -i '/<directories.*sbin/d' "$OSSEC_CONF"
+    sudo sed -i '/<directories.*lib/d' "$OSSEC_CONF"
+    sudo sed -i '/<directories.*lib64/d' "$OSSEC_CONF"
 
-    echo "Duplicate entries removed from ossec.conf."
+    echo "Duplicate entries commented out in ossec.conf."
 }
+
 
 # Function to update internal_options.conf
 update_internal_options() {
@@ -229,7 +233,7 @@ create_client_keys "$license_key"
 update_agent_conf
 
 # Remove duplicate entries from ossec.conf
-remove_entries_from_ossec_conf
+comment_out_duplicates_in_ossec_conf
 
 # Update internal_options.conf to allow remote commands
 update_internal_options
