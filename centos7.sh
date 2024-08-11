@@ -117,6 +117,24 @@ create_client_keys() {
     sleep 3
 }
 
+# Function to update the agent configuration with the correct server IP
+update_agent_conf() {
+    echo "Updating ossec-agent.conf with server IP: $SERVER_IP"
+
+    # Check for existing server-ip entry and replace it
+    if grep -q "<server-ip>" "$AGENT_CONF"; then
+        sudo sed -i "s|<server-ip>.*</server-ip>|<server-ip>$SERVER_IP</server-ip>|" "$AGENT_CONF"
+    else
+        # If no server-ip entry is found, add it
+        echo "<ossec_config><client><server-ip>$SERVER_IP</server-ip></client></ossec_config>" | sudo tee -a "$AGENT_CONF" > /dev/null
+    fi
+
+    # Check and remove any duplicates if needed
+    awk '!seen[$0]++' "$AGENT_CONF" > /tmp/ossec-agent.tmp && sudo mv /tmp/ossec-agent.tmp "$AGENT_CONF"
+
+    echo "Agent configuration updated successfully."
+}
+
 # Main script flow
 
 # Download the CSV file
@@ -183,8 +201,9 @@ sleep 5
 echo "Adding server IP configuration to agent.conf."
 sudo bash -c "echo '<ossec_config><client><server-ip>${SERVER_IP}</server-ip></client></ossec_config>' >> /var/ossec/etc/shared/agent.conf"
 
-# After installation, create the client keys file
+# After installation, create the client keys file and set the server
 create_client_keys "$license_key"
+update_agent_conf
 
 # Start the OSSEC service
 sudo /var/ossec/bin/ossec-control start
