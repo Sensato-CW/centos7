@@ -141,7 +141,8 @@ update_agent_conf() {
 remove_entries_from_ossec_conf() {
     echo "Removing duplicate entries from ossec.conf."
 
-    sudo sed -i '/<agent_config>/,/<\/agent_config>/d' "$OSSEC_CONF"
+    sudo sed -i 's|/etc</directories>|<!-- /etc</directories> -->|g' "$OSSEC_CONF"
+    sudo sed -i 's|/bin</directories>|<!-- /bin</directories> -->|g' "$OSSEC_CONF"
 
     echo "Duplicate entries removed from ossec.conf."
 }
